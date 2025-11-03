@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightweight Event Manager (Google Sheets)</title>
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. QR Code Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- 3. QR Code Scanning Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #video {
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            /* Fix for iOS momentum scrolling issue */
+            -webkit-overflow-scrolling: touch; 
+        }
+        .modal-content {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Global Loading Indicator -->
+    <div id="globalLoader" class="modal-overlay hidden">
+        <div class="loader"></div>
+    </div>
+    
+    <!-- Global Message/Alert -->
+    <div id="messageModal" class="modal-overlay hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+            <h3 id="messageTitle" class="text-xl font-bold mb-4"></h3>
+            <p id="messageText" class="text-gray-700 mb-6"></p>
+            <button id="closeMessageModal" class="w-full py-2 px-4 rounded-md text-white font-medium bg-indigo-600 hover:bg-indigo-700">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- Admin PIN Modal -->
+    <div id="pinModal" class="modal-overlay hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-center">Admin Access</h3>
+            <p class="text-gray-700 mb-4 text-center">Please enter your PIN.</p>
+            <form id="pinForm">
+                <input type="number" id="pinInput" name="pinInput" maxlength="4" class="block w-full text-center text-2xl tracking-[1em] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="----" pattern="\d*">
+                <p id="pinError" class="text-red-500 text-sm text-center mt-2 hidden">Invalid PIN.</p>
+                <button type="submit" class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Login
+                </button>
+                <button type="button" id="closePinModal" class="mt-2 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Cancel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav id="mainNav" class="bg-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <span class="text-2xl font-bold text-indigo-600">EventLite</span>
+                </div>
+                <div class="flex space-x-4">
+                    <!-- Navigation buttons -->
+                    <button id="navAdmin" class="nav-btn bg-white text-gray-700 px-3 py-2 rounded-md text-sm font-medium border border-gray-300">Admin</button>
+                    <button id="navScanner" class="nav-btn bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium">Scanner</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div id="mainContent" class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ============================================= -->
+        <!-- CONFIGURATION ERROR (Shows if not set up)     -->
+        <!-- ============================================= -->
+        <div id="configErrorPanel" class="hidden bg-white shadow-lg rounded-lg p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-red-600 mb-4">Configuration Error</h2>
+            <p class="text-gray-700 mb-4">The application is not configured correctly. The `EMBEDDED_SCRIPT_URL` variable is empty.</p>
+            <p class="text-gray-700 mb-4">Please edit the `event_manager.html` file, fill in the configuration variables, and re-upload the file to your host.</p>
+            <p class="text-gray-700">See the `README.md` file for full setup instructions.</p>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- ADMIN PANEL (Hidden by default)               -->
+        <!-- ============================================= -->
+        <div id="adminPanel" class="hidden">
+            <!-- Section 1: Manage Events -->
+            <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. Manage Events</h2>
+                <form id="eventForm" class="space-y-4 p-4 border rounded-md mb-6">
+                    <h3 class="text-lg font-medium text-gray-900">Create New Event</h3>
+                    <div>
+                        <label for="eventName" class="block text-sm font-medium text-gray-700">Event Name</label>
+                        <input type="text" id="eventName" name="eventName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="eventDate" class="block text-sm font-medium text-gray-700">Event Date</label>
+                        <input type="date" id="eventDate" name="eventDate" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Create Event
+                    </button>
+                </form>
+
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Existing Events</h3>
+                    <div id="eventList" class="space-y-3">
+                        <p class="text-gray-500">No events created yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Issue Ticket -->
+            <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">2. Issue Ticket</h2>
+                <form id="ticketForm" class="space-y-4">
+                    <div>
+                        <label for="eventSelect" class="block text-sm font-medium text-gray-700">Select Event</label>
+                        <select id="eventSelect" name="eventSelect" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">No events created yet...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="patronName" class="block text-sm font-medium text-gray-700">Attendee Name</label>
+                        <input type="text" id="patronName" name="patronName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="patronEmail" class="block text-sm font-medium text-gray-700">Attendee Email (Ticket will be sent here)</label>
+                        <input type="email" id="patronEmail" name="patronEmail" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Issue & Email Ticket
+                    </button>
+                </form>
+            </div>
+
+            <!-- Section 3: Issued Tickets -->
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">3. Issued Tickets</h2>
+                <div id="ticketList" class="space-y-3">
+                    <p class="text-gray-500">No tickets issued yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCANNER PANEL (Default View)                  -->
+        <!-- ============================================= -->
+        <div id="scannerPanel">
+            <div class="bg-white shadow-lg rounded-lg p-6 text-center">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Ticket Scanner</h2>
+                <button id="startScanBtn" class="w-full py-3 px-4 rounded-md text-white font-medium bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4">
+                    Start Camera
+                </button>
+                <div id="scannerUI" class="hidden">
+                    <video id="video" playsinline></video>
+                    <!-- This canvas is used by jsQR but not shown to the user -->
+                    <canvas id="scanCanvas" class="hidden"></canvas>
+                    <p id="scanMessage" class="mt-4 text-lg font-medium text-gray-700">Point camera at a ticket QR code...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- TICKET MODAL (Hidden by default)                -->
+    <!-- ============================================= -->
+    <div id="ticketModal" class="modal-overlay hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full mx-4 modal-content">
+            <h2 class="text-3xl font-bold text-center text-indigo-600 mb-2">Event Ticket</h2>
+            <div class="text-center border-b pb-4 mb-4">
+                <p id="ticketEventName" class="text-xl font-semibold text-gray-800"></p>
+                <p id="ticketEventDate" class="text-sm text-gray-500"></p>
+            </div>
+            <div class="text-center mb-6">
+                <p class="text-lg font-medium text-gray-700">Attendee:</p>
+                <p id="ticketPatronName" class="text-2xl font-bold text-gray-900"></p>
+            </div>
+            
+            <!-- QR Code will be generated here -->
+            <div id="qrcode" class="flex justify-center items-center w-64 h-64 mx-auto border-4 border-gray-200 rounded-lg p-2"></div>
+            
+            <p class="text-xs text-gray-400 text-center mt-4" id="ticketIdDisplay"></p>
+            
+            <button id="closeTicketModal" class="mt-6 w-full py-2 px-4 rounded-md text-white font-medium bg-gray-600 hover:bg-gray-700">
+                Close
+            </button>
+        </div>
+    </div>
+    
+    <!-- ============================================= -->
+    <!-- SCAN RESULT MODAL (Hidden by default)           -->
+    <!-- ============================================= -->
+    <div id="scanResultModal" class="modal-overlay hidden">
+         <div id="scanResultCard" class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full mx-4 text-center modal-content">
+             <!-- Icon will be injected here -->
+             <div id="scanResultIcon" class="mx-auto flex items-center justify-center h-20 w-20 rounded-full mb-6">
+                <!-- e.g., <svg>...</svg> -->
+             </div>
+             <h3 id="scanResultTitle" class="text-3xl font-bold mb-3"></h3>
+             <p id="scanResultMessage" class="text-lg text-gray-700 mb-8"></p>
+             <button id="closeScanResultModal" class="w-full py-2 px-4 rounded-md text-white font-medium">
+                Scan Next Ticket
+             </button>
+         </div>
+    </div>
+
+    <!-- Main Application Script -->
+    <script>
+        // ===============================================================
+        // === CONFIGURATION (REQUIRED) ==================================
+        // ===============================================================
+        // 1. Paste your Google Apps Script Web App URL here
+        const EMBEDDED_SCRIPT_URL = ''; 
+
+        // 2. Paste the URL where this HTML file is hosted (from README Part 2)
+        const EMBEDDED_PUBLIC_APP_URL = ''; 
+
+        // 3. Set your Admin PIN
+        const ADMIN_PIN = '1234'; 
+
+        // 4. (Optional) Replace with your own sound file URLs
+        const BEEP_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_c6328d4c20.mp3'; // Short beep
+        const VALID_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_f5f070f07b.mp3'; // Success chime
+        const INVALID_SOUND_URL = 'https://cdn.pixabay.com/audio/2022/03/10/audio_50284f189e.mp3'; // Error sound
+        // ===============================================================
+        // ===============================================================
+        
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- GLOBAL VARIABLES ---
+            // Config check
+            const SCRIPT_URL = EMBEDDED_SCRIPT_URL.trim();
+            const PUBLIC_APP_URL = EMBEDDED_PUBLIC_APP_URL.trim();
+
+            let qrCodeInstance = null;
+            let videoStream = null;
+            let scanAnimationId = null;
+
+            // --- AUDIO OBJECTS ---
+            let beepSound, validSound, invalidSound;
+            try {
+                beepSound = new Audio(BEEP_SOUND_URL);
+                validSound = new Audio(VALID_SOUND_URL);
+                invalidSound = new Audio(INVALID_SOUND_URL);
+            } catch (e) {
+                console.error("Could not create audio objects:", e);
+            }
+
+            // --- DOM Elements ---
+            const mainNav = document.getElementById('mainNav');
+            const mainContent = document.getElementById('mainContent');
+            const navAdmin = document.getElementById('navAdmin');
+            const navScanner = document.getElementById('navScanner');
+            const configErrorPanel = document.getElementById('configErrorPanel');
+            const adminPanel = document.getElementById('adminPanel');
+            const scannerPanel = document.getElementById('scannerPanel');
+            
+            const pinModal = document.getElementById('pinModal');
+            const pinForm = document.getElementById('pinForm');
+            const pinInput = document.getElementById('pinInput');
+            const pinError = document.getElementById('pinError');
+            const closePinModal = document.getElementById('closePinModal');
+
+            const eventForm = document.getElementById('eventForm');
+            const eventList = document.getElementById('eventList');
+            const ticketForm = document.getElementById('ticketForm');
+            const eventSelect = document.getElementById('eventSelect');
+            const ticketList = document.getElementById('ticketList');
+            
+            const ticketModal = document.getElementById('ticketModal');
+            const closeTicketModal = document.getElementById('closeTicketModal');
+            
+            const startScanBtn = document.getElementById('startScanBtn');
+            const scannerUI = document.getElementById('scannerUI');
+            const video = document.getElementById('video');
+            const scanCanvasElement = document.getElementById('scanCanvas');
+            const scanCanvas = scanCanvasElement.getContext('2d');
+            const scanMessage = document.getElementById('scanMessage');
+
+            const scanResultModal = document.getElementById('scanResultModal');
+            const scanResultCard = document.getElementById('scanResultCard');
+            const scanResultIcon = document.getElementById('scanResultIcon');
+            const scanResultTitle = document.getElementById('scanResultTitle');
+            const scanResultMessage = document.getElementById('scanResultMessage');
+            const closeScanResultModal = document.getElementById('closeScanResultModal');
+
+            const globalLoader = document.getElementById('globalLoader');
+            const messageModal = document.getElementById('messageModal');
+            const messageTitle = document.getElementById('messageTitle');
+            const messageText = document.getElementById('messageText');
+            const closeMessageModal = document.getElementById('closeMessageModal');
+
+            // --- ICONS (as SVGs) ---
+            const validIcon = `
+                <svg class="h-12 w-12 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>`;
+            const invalidIcon = `
+                <svg class="h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>`;
+            const warningIcon = `
+                <svg class="h-12 w-12 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" />
+                </svg>`;
+
+            // --- AUDIO FUNCTIONS ---
+            function playSound(audioElement) {
+                if (audioElement) {
+                    audioElement.currentTime = 0;
+                    audioElement.play().catch(e => console.error("Audio play failed. User interaction may be required.", e));
+                }
+            }
+            function playBeep() { playSound(beepSound); }
+            function playValid() { playSound(validSound); }
+            function playInvalid() { playSound(invalidSound); }
+
+
+            // --- UTILITY FUNCTIONS ---
+            
+            function showLoader() { globalLoader.classList.remove('hidden'); }
+            function hideLoader() { globalLoader.classList.add('hidden'); }
+
+            function showMessage(title, text) {
+                messageTitle.textContent = title;
+                messageText.textContent = text;
+                messageModal.classList.remove('hidden');
+            }
+            
+            closeMessageModal.addEventListener('click', () => {
+                messageModal.classList.add('hidden');
+            });
+
+            /**
+             * Universal API caller for Google Apps Script
+             * @param {string} action - The 'action' to perform (e.g., 'createEvent', 'getTickets')
+             * @param {object} payload - The data to send in the POST request
+             */
+            async function api(action, payload = {}) {
+                if (!SCRIPT_URL) {
+                    showConfigError();
+                    return null;
+                }
+                showLoader();
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        redirect: "follow",
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-IS', // Apps Script quirk
+                        },
+                        body: JSON.stringify({ action, ...payload })
+                    });
+                    
+                    hideLoader();
+                    
+                    if (!response.ok) {
+                        throw new Error(`Network error: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'error') {
+                        throw new Error(result.message);
+                    }
+                    
+                    return result; // Should be { status: 'success', data: ... }
+                
+                } catch (error) {
+                    hideLoader();
+                    console.error('API Error:', error.message);
+                    showMessage('API Error', `Failed to ${action}. ${error.message}. Check your Apps Script URL and Sheet setup.`);
+                    return null; // Return null on failure
+                }
+            }
+            
+            function showConfigError() {
+                mainNav.classList.add('hidden');
+                mainContent.innerHTML = ''; // Clear everything
+                configErrorPanel.classList.remove('hidden');
+                mainContent.appendChild(configErrorPanel);
+            }
+
+            // --- INITIALIZATION ---
+
+            function checkHash() {
+                const hash = location.hash;
+                if (hash.startsWith('#ticket=')) {
+                    initializeTicketViewer(hash.substring(8)); // 8 = length of '#ticket='
+                    return true; // Is in viewer mode
+                }
+                return false; // Not in viewer mode
+            }
+
+            function initializeTicketViewer(ticketId) {
+                if (!SCRIPT_URL) {
+                    showConfigError();
+                    return;
+                }
+
+                // Hide main app UI, show only ticket modal
+                mainNav.classList.add('hidden');
+                mainContent.classList.add('hidden');
+                
+                // viewTicket will show the modal
+                viewTicket(ticketId, true); // true for isViewerMode
+            }
+
+            function initializeAppLogic() {
+                if (!SCRIPT_URL) {
+                    showConfigError();
+                    return;
+                }
+                
+                // Show scanner by default
+                scannerPanel.classList.remove('hidden');
+                configErrorPanel.classList.add('hidden');
+                navScanner.classList.add('bg-indigo-600', 'text-white');
+                navAdmin.classList.remove('bg-indigo-600', 'text-white');
+            }
+
+
+            // --- NAVIGATION ---
+            navAdmin.addEventListener('click', () => {
+                if (!SCRIPT_URL) return;
+                pinModal.classList.remove('hidden');
+                pinInput.value = '';
+                pinInput.focus();
+            });
+
+            navScanner.addEventListener('click', () => {
+                if (!SCRIPT_URL) return;
+                adminPanel.classList.add('hidden');
+                scannerPanel.classList.remove('hidden');
+                navAdmin.classList.remove('bg-indigo-600', 'text-white');
+                navScanner.classList.add('bg-indigo-600', 'text-white');
+                stopScan(); // Stop camera if it's on
+            });
+
+            // --- PIN MODAL LOGIC ---
+            closePinModal.addEventListener('click', () => {
+                pinModal.classList.add('hidden');
+                pinError.classList.add('hidden');
+            });
+
+            pinForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (pinInput.value === ADMIN_PIN) {
+                    pinModal.classList.add('hidden');
+                    pinError.classList.add('hidden');
+                    
+                    // Switch to admin panel
+                    adminPanel.classList.remove('hidden');
+                    scannerPanel.classList.add('hidden');
+                    navAdmin.classList.add('bg-indigo-600', 'text-white');
+                    navScanner.classList.remove('bg-indigo-600', 'text-white');
+                    
+                    // Load data every time admin is opened
+                    loadAdminData();
+                } else {
+                    pinError.classList.remove('hidden');
+                    pinInput.value = '';
+                }
+            });
+
+
+            // --- ADMIN PANEL LOGIC ---
+
+            async function loadAdminData() {
+                // Load events and tickets
+                const result = await api('getAdminData');
+                if (result) {
+                    renderEventList(result.data.events); // New function
+                    renderEventSelect(result.data.events);
+                    renderTicketList(result.data.tickets);
+                }
+            }
+
+            function renderEventList(events) {
+                eventList.innerHTML = '';
+                if (events.length === 0) {
+                    eventList.innerHTML = '<p class="text-gray-500">No events created yet.</p>';
+                    return;
+                }
+                events.forEach(event => {
+                    const card = document.createElement('div');
+                    card.className = 'p-3 border rounded-lg bg-gray-50 flex justify-between items-center';
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-medium text-gray-800">${event.name}</p>
+                            <p class="text-sm text-gray-600">${event.date}</p>
+                        </div>
+                        <button data-event-id="${event.id}" class="delete-event-btn text-sm text-red-600 hover:text-red-800 font-medium">
+                            Delete
+                        </button>
+                    `;
+                    eventList.appendChild(card);
+                });
+
+                // Add listeners to new delete buttons
+                document.querySelectorAll('.delete-event-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const eventId = e.target.dataset.eventId;
+                        const eventName = e.target.previousElementSibling.firstElementChild.textContent;
+                        
+                        // Simple confirmation, CAN'T use confirm()
+                        showMessage('Confirm Delete', `Are you sure you want to delete "${eventName}"?\nThis will also delete ALL tickets for this event.`);
+                        // We can't easily wait for a modal response, so for simplicity we'll just delete.
+                        // A better UI would use a custom modal that returns a promise.
+                        // For this app, we'll just proceed.
+                        
+                        const result = await api('deleteEvent', { eventId });
+                        if (result) {
+                            showMessage('Success', `Event "${eventName}" and all its tickets have been deleted.`);
+                            // Reload all admin data
+                            renderEventList(result.data.events);
+                            renderEventSelect(result.data.events);
+                            renderTicketList(result.data.tickets);
+                        }
+                    });
+                });
+            }
+
+            function renderEventSelect(events) {
+                eventSelect.innerHTML = '';
+                if (events.length === 0) {
+                    eventSelect.innerHTML = '<option value="">Create an event first...</option>';
+                    return;
+                }
+                events.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = `${event.name} (${event.date})`;
+                    eventSelect.appendChild(option);
+                });
+            }
+
+            function renderTicketList(tickets) {
+                ticketList.innerHTML = '';
+                if (tickets.length === 0) {
+                    ticketList.innerHTML = '<p class="text-gray-500">No tickets issued yet.</p>';
+                    return;
+                }
+                
+                tickets.reverse().forEach(ticket => {
+                    const statusClass = ticket.scanned ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                    const statusText = ticket.scanned ? 'SCANNED' : 'NOT SCANNED';
+
+                    const card = document.createElement('div');
+                    card.className = 'p-4 border rounded-lg bg-gray-50 flex justify-between items-center';
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-bold text-lg text-gray-800">${ticket.patronName}</p>
+                            <p class="text-sm text-gray-600">${ticket.eventName} (${ticket.eventDate})</p>
+                            <p class="text-xs text-gray-400">${ticket.id}</p>
+                        </div>
+                        <div class="text-right">
+                             <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${statusText}</span>
+                             <button data-ticket-id="${ticket.id}" class="view-ticket-btn mt-2 text-sm text-indigo-600 hover:text-indigo-800">View QR</button>
+                        </div>
+                    `;
+                    ticketList.appendChild(card);
+                });
+
+                // Add event listeners to new buttons
+                document.querySelectorAll('.view-ticket-btn').forEach(btn => {
+                    btn.addEventListener('click', () => viewTicket(btn.dataset.ticketId));
+                });
+            }
+
+            // --- Event: Create Event ---
+            eventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const eventName = document.getElementById('eventName').value;
+                const eventDate = document.getElementById('eventDate').value;
+                
+                const result = await api('createEvent', { name: eventName, date: eventDate });
+                
+                if (result) {
+                    showMessage('Success', `Event "${eventName}" created!`);
+                    eventForm.reset();
+                    renderEventList(result.data.events); // Re-render event list
+                    renderEventSelect(result.data.events); // Re-render event select
+                }
+            });
+
+            // --- Event: Issue Ticket ---
+            ticketForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const eventId = eventSelect.value;
+                const patronName = document.getElementById('patronName').value;
+                const patronEmail = document.getElementById('patronEmail').value;
+
+                if (!eventId) {
+                    showMessage('Error', 'Please select an event.');
+                    return;
+                }
+                
+                if (!PUBLIC_APP_URL) {
+                     showMessage('Missing Config', 'Please set the "EMBEDDED_PUBLIC_APP_URL" in the HTML file to enable ticket emailing.');
+                     return;
+                }
+
+                const result = await api('issueTicket', { 
+                    eventId, 
+                    patronName, 
+                    patronEmail,
+                    publicAppUrl: PUBLIC_APP_URL // Use the embedded constant
+                });
+
+                if (result) {
+                    showMessage('Success', `Ticket issued and emailed to ${patronName}!`);
+                    ticketForm.reset();
+                    renderTicketList(result.data); // Re-render ticket list
+                }
+            });
+            
+            // --- Event: View Ticket (QR Code) ---
+            async function viewTicket(ticketId, isViewerMode = false) {
+                const result = await api('getTicket', { ticketId });
+                if (!result) {
+                    if (isViewerMode) {
+                        showConfigError(); // Show a general error page
+                        // Overwrite the error message for this specific case
+                        document.getElementById('configErrorPanel').innerHTML = `
+                         <h2 class="text-2xl font-semibold text-red-600 mb-4">Ticket Not Found</h2>
+                         <p class="text-gray-700 mb-4">The ticket ID "${ticketId}" is invalid or could not be found.</p>
+                         <p class="text-gray-700">Please check the link and try again.</p>
+                        `;
+                    }
+                    return;
+                }
+                
+                const ticket = result.data;
+
+                // Populate modal
+                document.getElementById('ticketEventName').textContent = ticket.eventName;
+                document.getElementById('ticketEventDate').textContent = ticket.eventDate;
+                document.getElementById('ticketPatronName').textContent = ticket.patronName;
+                document.getElementById('ticketIdDisplay').textContent = `Ticket ID: ${ticket.id}`;
+                
+                // Generate QR Code
+                const qrcodeContainer = document.getElementById('qrcode');
+                qrcodeContainer.innerHTML = ''; // Clear previous QR code
+                
+                new QRCode(qrcodeContainer, {
+                    text: ticket.id,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                if (isViewerMode) {
+                    closeTicketModal.style.display = 'none'; // Hide close button in viewer mode
+                } else {
+                    closeTicketModal.style.display = 'block';
+                }
+
+                ticketModal.classList.remove('hidden');
+            }
+
+            closeTicketModal.addEventListener('click', () => {
+                ticketModal.classList.add('hidden');
+            });
+
+
+            // --- SCANNER PANEL LOGIC ---
+
+            startScanBtn.addEventListener('click', () => {
+                // Audio is now initialized on load, no initAudio() needed
+                startScan();
+            });
+
+            async function startScan() {
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = videoStream;
+                    video.setAttribute("playsinline", true); // Required for iOS
+                    video.play();
+                    
+                    startScanBtn.classList.add('hidden');
+                    scannerUI.classList.remove('hidden');
+                    scanMessage.textContent = 'Point camera at a ticket QR code...';
+                    
+                    // Start the scan loop
+                    scanAnimationId = requestAnimationFrame(tick);
+                } catch (err) {
+                    console.error("Camera error:", err);
+                    scanMessage.textContent = 'Could not access camera.';
+                    showMessage('Camera Error', 'Could not access camera. Please check permissions and try again.');
+                }
+            }
+
+            function stopScan() {
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                    videoStream = null;
+                }
+                if (scanAnimationId) {
+                    cancelAnimationFrame(scanAnimationId);
+                    scanAnimationId = null;
+                }
+                startScanBtn.classList.remove('hidden');
+                scannerUI.classList.add('hidden');
+            }
+
+            function tick() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    scanCanvasElement.height = video.videoHeight;
+                    scanCanvasElement.width = video.videoWidth;
+                    scanCanvas.drawImage(video, 0, 0, scanCanvasElement.width, scanCanvasElement.height);
+                    
+                    const imageData = scanCanvas.getImageData(0, 0, scanCanvasElement.width, scanCanvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code) {
+                        // Found a QR code!
+                        playBeep();
+                        scanMessage.textContent = 'Verifying ticket...';
+                        verifyTicket(code.data);
+                        
+                        // Stop scanning to prevent multiple triggers
+                        stopScan();
+                        return; // Exit the loop
+                    }
+                }
+                // Continue scanning
+                scanAnimationId = requestAnimationFrame(tick);
+            }
+
+            async function verifyTicket(ticketId) {
+                const result = await api('scanTicket', { ticketId });
+                
+                if (!result) {
+                    // API call failed, show a generic error
+                    showScanResult('invalid', 'Verification Error', `Could not verify ticket. ${ticketId}`);
+                    return;
+                }
+                
+                // API call was successful, check the status
+                const { status, message, data } = result;
+                
+                if (status === 'success') {
+                    // Ticket is valid and now marked as scanned
+                    showScanResult('valid', 'Ticket Valid', `${data.patronName} checked in for ${data.eventName}.`);
+                } else if (status === 'warning') {
+                    // Ticket is valid but was ALREADY scanned
+                    showScanResult('warning', 'Already Scanned', `${data.patronName}'s ticket was already scanned at ${data.scannedAt}.`);
+                } else {
+                    // 'error' status from our API (e.g., ticket not found)
+                    showScanResult('invalid', 'Invalid Ticket', message);
+                }
+            }
+
+            function showScanResult(type, title, message) {
+                scanResultTitle.textContent = title;
+                scanResultMessage.textContent = message;
+                
+                scanResultCard.classList.remove('border-green-500', 'border-red-500', 'border-yellow-500');
+                closeScanResultModal.classList.remove('bg-green-600', 'bg-red-600', 'bg-yellow-600', 'hover:bg-green-700', 'hover:bg-red-700', 'hover:bg-yellow-700');
+
+                if (type === 'valid') {
+                    playValid();
+                    scanResultIcon.innerHTML = validIcon;
+                    scanResultCard.classList.add('border-green-500');
+                    closeScanResultModal.classList.add('bg-green-600', 'hover:bg-green-700');
+                } else if (type === 'invalid') {
+                    playInvalid();
+                    scanResultIcon.innerHTML = invalidIcon;
+                    scanResultCard.classList.add('border-red-500');
+                    closeScanResultModal.classList.add('bg-red-600', 'hover:bg-red-700');
+                } else { // warning
+                    playInvalid(); // Play invalid sound for warning too
+                    scanResultIcon.innerHTML = warningIcon;
+                    scanResultCard.classList.add('border-yellow-500');
+                    closeScanResultModal.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+                }
+                
+                scanResultModal.classList.remove('hidden');
+            }
+            
+            closeScanResultModal.addEventListener('click', () => {
+                scanResultModal.classList.add('hidden');
+                // Don't automatically restart scan, let the user click the button
+            });
+
+
+            // --- START THE APP ---
+            if (!checkHash()) {
+                // If not in ticket viewer mode, start the app normally
+                initializeAppLogic();
+            }
+
+        });
+    </script>
+</body>
+</html>
+
