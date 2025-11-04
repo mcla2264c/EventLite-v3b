@@ -276,14 +276,27 @@
         // ===============================================================
         // === CONFIGURATION (REQUIRED) ==================================
         // ===============================================================
+        
         // 1. Set your Admin PIN (only used for UI login)
         const ADMIN_PIN = '1234'; 
 
         // 2. Set the URL of the deployed Google Apps Script (Code.gs).
-        //    **YOU MUST UPDATE THIS VALUE AFTER DEPLOYMENT** (See README.md).
         const EMAIL_SERVICE_URL = '[https://script.google.com/macros/s/AKfycbyW0N56gYTxM1Rcf8_WXhmOmL0pLv8F_EgWhxkplDoYUIzYR5nWBQzW8g69D6zAOnN9lQ/exec](https://script.google.com/macros/s/AKfycbyW0N56gYTxM1Rcf8_WXhmOmL0pLv8F_EgWhxkplDoYUIzYR5nWBQzW8g69D6zAOnN9lQ/exec)'; 
 
-        // 3. (Optional) Replace with your own sound file URLs
+        // 3. FOR EXTERNAL HOSTING ONLY: Paste your Firebase config object here.
+        //    If running in the Gemini preview, this will be ignored.
+        //    Replace the placeholder values with your project's credentials.
+        const CUSTOM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAZz-onz-MM__70UAM-8bUoZKwNCZ19fAc",
+  authDomain: "eventlite-7604d.firebaseapp.com",
+  projectId: "eventlite-7604d",
+  storageBucket: "eventlite-7604d.firebasestorage.app",
+  messagingSenderId: "348947151704",
+  appId: "1:348947151704:web:b94c3ed340cc81983e432d",
+  measurementId: "G-8PWJTVY2GB"
+};
+
+        // 4. (Optional) Replace with your own sound file URLs
         const VALID_SOUND_URL = 'https://audio.jukehost.co.uk/hwKXRIsgvAjL7B2SWXLMC4CLjiG5wFg3.mp3'; // Success chime
         const INVALID_SOUND_URL = 'https://audio.jukehost.co.uk/zFn82lCNURrv5lY17P0I8FDJMqPDHieS.mp3'; // Error sound
         // ===============================================================
@@ -297,15 +310,26 @@
             }
 
             // --- GLOBAL FIREBASE VARIABLES ---
+            // 1. Determine App ID (Use environment ID if available, otherwise use a fallback)
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            // 2. Determine Firebase Config (Prioritize environment, then custom config)
             let firebaseConfig = null;
             try {
-                firebaseConfig = JSON.parse(__firebase_config);
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    // Try to use the config provided by the Gemini environment
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } else if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.projectId) {
+                    // Fallback to the custom config defined in the script
+                    firebaseConfig = CUSTOM_FIREBASE_CONFIG;
+                }
             } catch (e) {
-                console.error("Firebase config missing or invalid.", e);
-                showMessage('Configuration Error', 'Firebase configuration is missing or invalid.');
-                return;
+                console.warn("Could not parse environment Firebase config. Checking custom config.");
+                if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.projectId) {
+                    firebaseConfig = CUSTOM_FIREBASE_CONFIG;
+                }
             }
+
 
             let app, db, auth;
             let userId = null;
@@ -419,6 +443,12 @@
             async function initializeFirebase() {
                 initialLoading.classList.remove('hidden');
                 
+                if (!firebaseConfig || !firebaseConfig.projectId) {
+                    initialLoading.classList.add('hidden');
+                    showMessage('Configuration Error', 'Firebase configuration is missing or invalid. If running externally, please update the **CUSTOM_FIREBASE_CONFIG** variable in the HTML file.');
+                    return;
+                }
+
                 try {
                     // Set Firestore log level to Debug for visibility
                     firebase.setLogLevel('Debug');
@@ -427,19 +457,21 @@
                     db = firebase.getFirestore(app);
                     auth = firebase.getAuth(app);
                     
-                    // Attempt to sign in with custom token or anonymously
+                    // Attempt to sign in with custom token (from environment) or anonymously (for external or missing token)
                     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                     
                     if (initialAuthToken) {
                         await firebase.signInWithCustomToken(auth, initialAuthToken);
                     } else {
+                        // This ensures the app works when hosted externally and no token is available.
                         await firebase.signInAnonymously(auth);
                     }
 
                     // Auth State Change Listener (Sets global state)
                     firebase.onAuthStateChanged(auth, (user) => {
                         if (user) {
-                            userId = user.uid;
+                            // Use the authenticated user's ID
+                            userId = user.uid; 
                             displayUserId.textContent = userId;
                             isAuthReady = true;
                             
@@ -451,8 +483,9 @@
                             // Start listening for real-time data
                             startRealTimeListeners();
                         } else {
-                            // User is signed out (shouldn't happen in this environment)
-                            userId = crypto.randomUUID(); // Fallback ID
+                            // If sign-in failed or anonymous sign-in failed (shouldn't happen with correct rules)
+                            // Fallback to a random ID for unauthenticated use
+                            userId = crypto.randomUUID(); 
                             displayUserId.textContent = userId;
                             isAuthReady = true;
                             if (!checkHash()) {
@@ -465,7 +498,7 @@
                 } catch (error) {
                     console.error("Firebase Initialization Failed:", error);
                     initialLoading.classList.add('hidden');
-                    showMessage('Setup Error', `Firebase initialization failed. Check your config. Error: ${error.message}`);
+                    showMessage('Setup Error', `Firebase initialization failed. Error: ${error.message}. Check your console and your configuration.`);
                 }
             }
 
