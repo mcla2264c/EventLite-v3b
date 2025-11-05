@@ -7,6 +7,8 @@
     <!-- Firebase and QR Code Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- PapaParse for CSV reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,6 +60,13 @@
             padding: 0;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            /* Flex layout to push footer down */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #appContainer {
+            flex-grow: 1; /* Makes the main container grow to fill space */
         }
         .container { 
             max-width: 900px; 
@@ -160,6 +169,25 @@
             font-size: 1rem;
             font-family: 'Poppins', sans-serif;
             transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        /* Custom style for file input */
+        .form-group input[type="file"] {
+            padding: 10px;
+            background: var(--bg-color);
+        }
+        .form-group input[type="file"]::file-selector-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+        .form-group input[type="file"]::file-selector-button:hover {
+            background: #3a7bc8;
         }
         .form-group input:focus, .form-group select:focus {
             outline: none;
@@ -280,6 +308,7 @@
         
         /* Scanner */
         #scannerView { text-align: center; }
+        /* H1 Ticket Scanner header removed */
         #videoContainer {
             position: relative;
             width: 100%;
@@ -310,8 +339,28 @@
         #scanResult.success { background-color: var(--success-color); color: white; }
         #scanResult.error { background-color: var(--danger-color); color: white; }
         #scanResult.warn { background-color: var(--warning-color); color: var(--dark-color); }
-        /* New 'info' class for Ready to Scan */
         #scanResult.info { background-color: var(--info-color); color: white; }
+
+        /* CSV Progress Bar */
+        #csvProgress {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 15px;
+        }
+        #csvProgress .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        #csvProgress .progress-bar-inner {
+            width: 0%;
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+        }
 
 
         /* Event & Ticket Lists */
@@ -347,6 +396,18 @@
             margin: 20px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* New Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 0.9rem;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            width: 100%;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -388,7 +449,7 @@
                 
                 <nav class="sub-nav">
                     <button class="admin-tab-btn active" data-tab="tab-manage">Manage Events</button>
-                    <button class="admin-tab-btn" data-tab="tab-issue">Issue Ticket</button>
+                    <button class="admin-tab-btn" data-tab="tab-issue">Issue Tickets</button>
                     <button class="admin-tab-btn" data-tab="tab-view">View Issued Tickets</button>
                 </nav>
 
@@ -417,7 +478,7 @@
                 <!-- Admin Tab: Issue Ticket -->
                 <div id="tab-issue" class="admin-tab-content">
                     <div class="card">
-                        <h2>Issue New Ticket</h2>
+                        <h2>Issue New Ticket(s)</h2>
                         <div class="form-group">
                             <label for="eventSelect">Select Event</label>
                             <select id="eventSelect" class="form-group" style="width: 100%;"></select>
@@ -430,7 +491,26 @@
                             <label for="patronEmail">Patron Email</label>
                             <input type="email" id="patronEmail" placeholder="e.g., jane.doe@example.com">
                         </div>
-                        <button id="issueTicketBtn">Issue Ticket & Send Email</button>
+                        <!-- New Quantity Field -->
+                        <div class="form-group">
+                            <label for="patronQuantity">Quantity</label>
+                            <input type="number" id="patronQuantity" value="1" min="1" max="50" class="form-group">
+                        </div>
+                        <button id="issueTicketBtn">Issue Ticket(s) & Send Email</button>
+                    </div>
+                    
+                    <!-- New CSV Upload Card -->
+                    <div class="card">
+                        <h2>Bulk Issue from CSV</h2>
+                        <p>Select the event above, then upload a CSV file. Columns must be in this order: <strong>Name, Email, Quantity</strong></p>
+                        <div class="form-group">
+                            <label for="csvFile">Upload CSV File (.csv)</label>
+                            <input type="file" id="csvFile" accept=".csv" class="form-group">
+                        </div>
+                        <button id="processCsvBtn">Process CSV & Send Tickets</button>
+                        <div id="csvProgress">
+                            <!-- Progress will be shown here -->
+                        </div>
                     </div>
                 </div>
                 
@@ -451,7 +531,7 @@
 
             <!-- Scanner View -->
             <div id="scannerView" class="app-view">
-                <h1>Ticket Scanner</h1>
+                <!-- Header "Ticket Scanner" removed -->
                 <div id="videoContainer">
                     <video id="video" playsinline></video>
                     <div id="scanOverlay"></div>
@@ -474,6 +554,11 @@
             </div>
         </div>
     </div>
+    
+    <!-- New Footer -->
+    <footer class="footer">
+        MVC DBA EventLite 2025
+    </footer>
 
     <script type="module">
         // --- CONFIGURATION ---
@@ -556,6 +641,11 @@
         const eventSelect = document.getElementById('eventSelect');
         const patronNameInput = document.getElementById('patronName');
         const patronEmailInput = document.getElementById('patronEmail');
+        const patronQuantityInput = document.getElementById('patronQuantity'); // New quantity input
+        
+        const csvFileInput = document.getElementById('csvFile'); // New CSV elements
+        const processCsvBtn = document.getElementById('processCsvBtn');
+        const csvProgress = document.getElementById('csvProgress');
         
         const eventFilterSelect = document.getElementById('eventFilterSelect');
         const issuedTicketsList = document.getElementById('issuedTicketsList');
@@ -602,7 +692,7 @@
                 }
 
                 loadingView.style.display = 'none';
-                appContainer.style.display = 'block';
+                appContainer.style.display = 'flex'; // Use flex to position footer
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const ticketId = urlParams.get('ticket');
@@ -643,7 +733,6 @@
                 scannerView.style.display = 'block';
                 
                 // --- AUDIO FIX: Prime audio on user tap ---
-                // This connects the audio loading to a user gesture.
                 audioValid.load();
                 audioInvalid.load();
                 // --- End Audio Fix ---
@@ -771,7 +860,6 @@
                 alert("Please enter both event name and date.");
                 return;
             }
-
             try {
                 await window.firebase.addDoc(window.firebase.collection(db, "events"), {
                     name: name,
@@ -804,7 +892,7 @@
         }
 
         /**
-         * Admin: Ticket Management
+         * Admin: Ticket Management (Manual & Bulk)
          */
         eventFilterSelect.addEventListener('change', () => {
             loadTickets(eventFilterSelect.value);
@@ -874,13 +962,15 @@
             }
         }
 
+        // Manual Ticket Issuing
         issueTicketBtn.addEventListener('click', async () => {
             const eventId = eventSelect.value;
             const patronName = patronNameInput.value.trim();
             const patronEmail = patronEmailInput.value.trim();
+            const quantity = parseInt(patronQuantityInput.value);
             
-            if (!eventId || !patronName || !patronEmail) {
-                alert("Please select an event and fill in all patron details.");
+            if (!eventId || !patronName || !patronEmail || !quantity || quantity < 1) {
+                alert("Please select an event, fill in all patron details, and set a valid quantity.");
                 return;
             }
 
@@ -895,41 +985,164 @@
             issueTicketBtn.textContent = "Issuing...";
 
             try {
+                const batch = window.firebase.writeBatch(db);
                 const ticketsRef = window.firebase.collection(db, "events", eventId, "tickets");
-                const ticketDoc = await window.firebase.addDoc(ticketsRef, {
-                    name: patronName,
-                    email: patronEmail,
-                    scanned: false,
-                    scannedAt: null
-                });
+                const ticketLinks = []; // To store links for the single email
                 
-                const ticketLink = `${window.location.origin}${window.location.pathname}?event=${eventId}&ticket=${ticketDoc.id}`;
+                for (let i = 1; i <= quantity; i++) {
+                    const ticketName = quantity > 1 ? `${patronName} (${i}/${quantity})` : patronName;
+                    const newTicketRef = window.firebase.doc(ticketsRef); // Auto-generates ID
+                    
+                    batch.set(newTicketRef, {
+                        name: ticketName,
+                        email: patronEmail,
+                        scanned: false,
+                        scannedAt: null
+                    });
+                    
+                    const ticketLink = `${window.location.origin}${window.location.pathname}?event=${eventId}&ticket=${newTicketRef.id}`;
+                    ticketLinks.push({ id: newTicketRef.id, link: ticketLink, name: ticketName });
+                }
                 
+                await batch.commit(); // Commit all tickets at once
+                
+                // Send one consolidated email
                 await sendTicketEmail({
                     event: eventDetails,
-                    ticketId: ticketDoc.id,
                     email: patronEmail,
-                    ticketLink: ticketLink,
-                    name: patronName
+                    name: patronName,
+                    ticketLinks: ticketLinks // Pass the array of links
                 });
 
-                alert(`Ticket successfully issued to ${patronName} and email sent!`);
+                alert(`${quantity} ticket(s) successfully issued to ${patronName} and email sent!`);
                 patronNameInput.value = '';
                 patronEmailInput.value = '';
+                patronQuantityInput.value = '1';
 
             } catch (error) {
-                console.error("Error issuing ticket: ", error);
-                alert("Failed to issue ticket: " + error.message);
+                console.error("Error issuing ticket(s): ", error);
+                alert("Failed to issue ticket(s): " + error.message);
             } finally {
                 issueTicketBtn.disabled = false;
-                issueTicketBtn.textContent = "Issue Ticket & Send Email";
+                issueTicketBtn.textContent = "Issue Ticket(s) & Send Email";
             }
         });
+        
+        // CSV Bulk Issuing
+        processCsvBtn.addEventListener('click', () => {
+            const eventId = eventSelect.value;
+            if (!eventId) {
+                alert("Please select an event from the 'Issue New Ticket(s)' card above before processing a CSV.");
+                return;
+            }
+            
+            const file = csvFileInput.files[0];
+            if (!file) {
+                alert("Please select a CSV file to upload.");
+                return;
+            }
 
-        async function sendTicketEmail(ticketData) {
+            processCsvBtn.disabled = true;
+            processCsvBtn.textContent = "Processing...";
+            
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    processCsvResults(results.data, eventId);
+                },
+                error: (err) => {
+                    alert("Failed to parse CSV file: " + err.message);
+                    processCsvBtn.disabled = false;
+                    processCsvBtn.textContent = "Process CSV & Send Tickets";
+                }
+            });
+        });
+        
+        async function processCsvResults(rows, eventId) {
+            const selectedEvent = eventSelect.options[eventSelect.selectedIndex];
+            const eventDetails = {
+                id: eventId,
+                name: selectedEvent.dataset.name,
+                date: selectedEvent.dataset.date
+            };
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            csvProgress.innerHTML = `
+                <p>Processing ${rows.length} rows... (0% complete)</p>
+                <div class="progress-bar"><div class="progress-bar-inner" id="csvProgressBar"></div></div>
+            `;
+            const progressBar = document.getElementById('csvProgressBar');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                try {
+                    const name = row[0] ? row[0].trim() : null;
+                    const email = row[1] ? row[1].trim() : null;
+                    const quantity = parseInt(row[2]);
+
+                    if (!name || !email || !quantity || quantity < 1) {
+                        throw new Error(`Skipping row ${i+1}: Invalid data. (Name: ${name}, Email: ${email}, Qty: ${quantity})`);
+                    }
+
+                    // Create tickets in a batch
+                    const batch = window.firebase.writeBatch(db);
+                    const ticketsRef = window.firebase.collection(db, "events", eventId, "tickets");
+                    const ticketLinks = [];
+                    
+                    for (let j = 1; j <= quantity; j++) {
+                        const ticketName = quantity > 1 ? `${name} (${j}/${quantity})` : name;
+                        const newTicketRef = window.firebase.doc(ticketsRef);
+                        
+                        batch.set(newTicketRef, {
+                            name: ticketName,
+                            email: email,
+                            scanned: false,
+                            scannedAt: null
+                        });
+                        
+                        const ticketLink = `${window.location.origin}${window.location.pathname}?event=${eventId}&ticket=${newTicketRef.id}`;
+                        ticketLinks.push({ id: newTicketRef.id, link: ticketLink, name: ticketName });
+                    }
+                    
+                    await batch.commit(); // Save tickets to Firestore
+                    
+                    // Send consolidated email
+                    await sendTicketEmail({
+                        event: eventDetails,
+                        email: email,
+                        name: name,
+                        ticketLinks: ticketLinks
+                    });
+                    
+                    successCount++;
+
+                } catch (error) {
+                    console.error(error.message);
+                    errorCount++;
+                }
+                
+                // Update progress
+                const percent = ((i + 1) / rows.length) * 100;
+                progressBar.style.width = `${percent}%`;
+                csvProgress.querySelector('p').textContent = `Processing ${rows.length} rows... (${Math.round(percent)}% complete) | Success: ${successCount}, Failed: ${errorCount}`;
+            }
+
+            // Final report
+            csvProgress.innerHTML = `Processing Complete! <strong>${successCount}</strong> emails sent (for ${rows.length} rows). <strong>${errorCount}</strong> rows failed.`;
+            processCsvBtn.disabled = false;
+            processCsvBtn.textContent = "Process CSV & Send Tickets";
+            csvFileInput.value = ''; // Clear the file input
+        }
+
+        // Standardized Email Function
+        async function sendTicketEmail(data) {
+            // data = { event, email, name, ticketLinks: [] }
             if (EMAIL_SERVICE_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL") {
                 console.warn("Email sending skipped: EMAIL_SERVICE_URL is not set.");
-                throw new Error("Email sending failed (Admin setup incomplete). Ticket was created, but no email was sent.");
+                throw new Error("Email sending failed (Admin setup incomplete). Ticket(s) were created, but no email was sent.");
             }
             try {
                 const response = await fetch(EMAIL_SERVICE_URL, {
@@ -937,7 +1150,7 @@
                     mode: 'cors',
                     cache: 'no-cache',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(ticketData),
+                    body: JSON.stringify(data), // Send the whole object
                     redirect: 'follow'
                 });
                 const result = await response.json();
@@ -947,7 +1160,7 @@
                 console.log("Email service success:", result.message);
             } catch (error) {
                 console.error("Error calling email service:", error);
-                throw new Error(`Ticket was created, but email failed to send: ${error.message}`);
+                throw new Error(`Ticket(s) were created, but email failed to send: ${error.message}`);
             }
         }
         
@@ -1017,13 +1230,12 @@
                     video.setAttribute("playsinline", true);
                     video.play();
                     
-                    // Set default "Ready to scan" message
                     scanResult.style.display = 'block';
                     scanResult.className = 'info';
                     scanResult.textContent = 'Ready to scan';
                     
                     isScanning = true;
-                    scanner = requestAnimationFrame(tick); // Start the loop
+                    scanner = requestAnimationFrame(tick); 
                 })
                 .catch(err => {
                     console.error("Camera Error:", err);
@@ -1060,7 +1272,7 @@
                 });
 
                 if (code) {
-                    isScanning = false; // Stop scanning temporarily
+                    isScanning = false; 
                     handleScannedCode(code.data);
                 }
             }
@@ -1084,12 +1296,12 @@
                 scanResult.className = 'error'; // Red
                 scanResult.textContent = "Invalid QR Code. Not a valid ticket.";
                 playSound('invalid');
-                restartScanner(4000); // 4-second cooldown
+                restartScanner(4000); 
                 return;
             }
 
             const { eventId, ticketId } = parsedData;
-            scanResult.className = 'info'; // Blue
+            scanResult.className = 'info'; 
             scanResult.textContent = `Found Ticket ID: ${ticketId}. Verifying...`;
 
             try {
@@ -1114,7 +1326,6 @@
                     return;
                 }
 
-                // Mark as scanned
                 await window.firebase.updateDoc(ticketRef, {
                     scanned: true,
                     scannedAt: window.firebase.serverTimestamp()
@@ -1136,11 +1347,10 @@
         
         function restartScanner(cooldown) {
             setTimeout(() => {
-                // Reset to 'Ready to scan' state
                 scanResult.className = 'info';
                 scanResult.textContent = 'Ready to scan';
                 
-                if (currentView === 'scanner') { // Only restart if still on scanner view
+                if (currentView === 'scanner') { 
                     isScanning = true;
                     scanner = requestAnimationFrame(tick);
                 }
@@ -1153,3 +1363,4 @@
     </script>
 </body>
 </html>
+
