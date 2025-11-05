@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Manager</title>
+    <title>EventLite Manager</title>
     <!-- Firebase and QR Code Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Import Firebase v9 SDKs -->
     <script type="module">
         // Import specific functions from the SDKs
@@ -31,24 +36,33 @@
     </script>
     <style>
         :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
+            --primary-color: #4A90E2; /* A modern blue */
+            --secondary-color: #50E3C2; /* A bright mint green/aqua */
             --success-color: #28a745;
             --danger-color: #dc3545;
             --warning-color: #ffc107;
-            --light-color: #f8f9fa;
-            --dark-color: #343a40;
-            --bg-color: #f4f4f4;
+            --light-color: #ffffff;
+            --dark-color: #2F3136;
+            --text-color: #333;
+            --bg-color: #f7f8fa;
+            --border-color: #e0e0e0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --border-radius: 8px;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            color: var(--dark-color);
+            color: var(--text-color);
             margin: 0;
             padding: 0;
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
-        .container { max-width: 900px; margin: 20px auto; padding: 0 20px; }
+        .container { 
+            max-width: 900px; 
+            margin: 20px auto; 
+            padding: 0 20px; 
+        }
         .app-view { display: none; }
         #loadingView {
             display: flex;
@@ -58,84 +72,211 @@
             font-size: 1.5rem;
             flex-direction: column;
         }
-        /* ... (rest of the styles) ... */
-        h1, h2, h3 { color: var(--primary-color); }
-        h1 { text-align: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
         
-        /* Navigation */
-        nav { background: var(--dark-color); padding: 10px; text-align: center; }
-        nav button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 5px;
+        /* New Header/Nav */
+        .header {
+            background: var(--light-color);
+            padding: 15px 30px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        nav#mainNav {
+            display: flex;
+            gap: 10px;
+        }
+        nav#mainNav button {
+            background: transparent;
+            color: #555;
+            border: 2px solid transparent;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
             cursor: pointer;
             font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            width: auto;
+            margin: 0;
         }
-        nav button:hover { background: #0056b3; }
-        nav button.active { background: #0056b3; font-weight: bold; }
+        nav#mainNav button:hover {
+            color: var(--primary-color);
+            background: #f0f7ff;
+        }
+        nav#mainNav button.active {
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary-color);
+            background: #f0f7ff;
+            border-radius: 4px 4px 0 0;
+        }
+
+        h1, h2, h3 { 
+            color: var(--text-color); 
+            font-weight: 600;
+            margin-top: 0;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Card / Section Styling */
+        .card {
+            background: var(--light-color);
+            padding: 25px 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-top: 20px;
+        }
 
         /* Forms and Inputs */
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input {
+        .form-group { margin-bottom: 20px; }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 500; 
+            font-size: 0.95rem;
+        }
+        .form-group input, .form-group select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box; /* Important */
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
         }
         button {
             background: var(--primary-color);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
+            padding: 14px 22px;
+            border-radius: var(--border-radius);
             cursor: pointer;
             font-size: 1rem;
+            font-weight: 500;
             width: 100%;
             margin-top: 10px;
+            transition: background-color 0.2s;
+            font-family: 'Poppins', sans-serif;
         }
+        button:hover { background: #3a7bc8; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
         button.danger { background-color: var(--danger-color); }
         button.danger:hover { background-color: #c82333; }
-        button.secondary { background-color: var(--secondary-color); }
+        button.secondary { background-color: #6c757d; }
         button.secondary:hover { background-color: #5a6268; }
+        button.small {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            width: auto;
+            margin: 0;
+        }
 
         /* PIN Pad */
+        #pinView .card { max-width: 400px; margin-left: auto; margin-right: auto; }
         #pinPad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            max-width: 300px;
+            gap: 15px;
             margin: 20px auto;
         }
-        #pinPad button { width: auto; font-size: 1.5rem; padding: 20px; }
+        #pinPad button { width: auto; font-size: 1.5rem; padding: 20px; background: #f0f0f0; color: var(--text-color); }
+        #pinPad button:hover { background: #e0e0e0; }
         #pinDisplay {
-            background: #fff;
-            border: 1px solid #ccc;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
             padding: 15px;
             text-align: center;
             font-size: 2rem;
             letter-spacing: 10px;
             min-height: 50px;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
             margin-bottom: 15px;
         }
 
-        /* Ticket View */
-        #ticketDetails { text-align: center; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        #ticketQRCode { width: 300px; height: 300px; margin: 20px auto; padding: 15px; background: #fff; border-radius: 10px; }
+        /* Admin Sub-Navigation */
+        nav.sub-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+        nav.sub-nav button {
+            background: transparent;
+            color: #777;
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0 10px 0 0;
+            border-radius: 0;
+            width: auto;
+            transition: all 0.2s;
+        }
+        nav.sub-nav button:hover { color: var(--text-color); }
+        nav.sub-nav button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: 600;
+        }
+        .admin-tab-content { display: none; }
+        .admin-tab-content.active { display: block; }
+
+
+        /* Ticket View (External) */
+        #ticketView {
+            /* This view is now special. If it's loaded, we hide the main header */
+            padding-top: 20px;
+        }
+        body.ticket-view-mode .header { display: none; } /* Hide nav header in ticket view */
+        #ticketDetails { 
+            text-align: center; 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        #ticketQRCode { 
+            width: 300px; 
+            height: 300px; 
+            margin: 20px auto; 
+            padding: 15px; 
+            background: #fff; 
+            border-radius: 10px; 
+            box-shadow: var(--shadow);
+        }
         #ticketStatus {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.2rem;
+            font-weight: 600;
             padding: 15px;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
             margin-top: 20px;
         }
-        #ticketStatus.valid { color: var(--success-color); border: 2px solid var(--success-color); }
-        #ticketStatus.invalid { color: var(--danger-color); border: 2px solid var(--danger-color); }
+        #ticketStatus.valid { color: var(--success-color); background: #e9f7ec; border: 1px solid var(--success-color); }
+        #ticketStatus.invalid { color: var(--danger-color); background: #fdf0f1; border: 1px solid var(--danger-color); }
         
         /* Scanner */
         #scannerView { text-align: center; }
@@ -144,9 +285,10 @@
             width: 100%;
             max-width: 600px;
             margin: 20px auto;
-            border-radius: 10px;
+            border-radius: var(--border-radius);
             overflow: hidden;
             border: 5px solid var(--dark-color);
+            box-shadow: var(--shadow);
         }
         #video { width: 100%; height: auto; display: block; }
         #scanOverlay {
@@ -159,9 +301,10 @@
             padding: 20px;
             font-size: 1.2rem;
             font-weight: bold;
-            border-radius: 5px;
+            border-radius: var(--border-radius);
             margin-top: 20px;
             display: none;
+            box-shadow: var(--shadow);
         }
         #scanResult.success { background-color: var(--success-color); color: white; }
         #scanResult.error { background-color: var(--danger-color); color: white; }
@@ -172,22 +315,23 @@
             background: #fff;
             padding: 15px 20px;
             margin-bottom: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: box-shadow 0.2s;
         }
+        .list-item:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .list-item-content { flex-grow: 1; }
-        .list-item-content h3 { margin: 0 0 5px; }
+        .list-item-content h3 { margin: 0 0 5px; font-size: 1.1rem; }
         .list-item-content p { margin: 0; font-size: 0.9rem; color: #555; }
-        .list-item button { width: auto; margin: 0 0 0 10px; padding: 8px 12px; font-size: 0.9rem; }
-        
         #issuedTicketsList .qr-code-container {
             padding: 10px;
             background: #fff;
             border: 1px solid #eee;
             margin-top: 10px;
+            border-radius: var(--border-radius);
         }
         .loader {
             border: 4px solid #f3f3f3;
@@ -209,23 +353,29 @@
     </div>
 
     <div id="appContainer" style="display: none;">
-        <nav id="mainNav">
-            <button id="navAdmin">Admin</button>
-            <button id="navScanner">Scanner</button>
-            <button id="navTicket">Ticket Viewer</button>
-        </nav>
+        
+        <header class="header">
+            <h1 class="logo">EventLite</h1>
+            <nav id="mainNav">
+                <button id="navAdmin">Admin</button>
+                <button id="navScanner">Scanner</button>
+                <!-- "Ticket Viewer" button removed per request -->
+            </nav>
+        </header>
 
         <div class="container">
             <!-- PIN View -->
             <div id="pinView" class="app-view">
-                <h2>Admin Access</h2>
-                <p>Enter PIN to access the admin panel.</p>
-                <div id="pinDisplay"></div>
-                <div id="pinPad">
-                    <button>1</button><button>2</button><button>3</button>
-                    <button>4</button><button>5</button><button>6</button>
-                    <button>7</button><button>8</button><button>9</button>
-                    <button id="pinClear">C</button><button>0</button><button id="pinDelete">⌫</button>
+                <div class="card">
+                    <h2>Admin Access</h2>
+                    <p>Enter PIN to access the admin panel.</p>
+                    <div id="pinDisplay"></div>
+                    <div id="pinPad">
+                        <button>1</button><button>2</button><button>3</button>
+                        <button>4</button><button>5</button><button>6</button>
+                        <button>7</button><button>8</button><button>9</button>
+                        <button id="pinClear">C</button><button>0</button><button id="pinDelete">⌫</button>
+                    </div>
                 </div>
             </div>
 
@@ -233,47 +383,67 @@
             <div id="adminView" class="app-view">
                 <h1>Admin Panel</h1>
                 
-                <section id="manageEventsSection">
-                    <h2>Manage Events</h2>
-                    <div class="form-group">
-                        <label for="eventName">Event Name</label>
-                        <input type="text" id="eventName" placeholder="e.g., Summer Concert">
-                    </div>
-                    <div class="form-group">
-                        <label for="eventDate">Event Date</label>
-                        <input type="date" id="eventDate">
-                    </div>
-                    <button id="createEventBtn">Create Event</button>
-                    <div id="eventListLoader" class="loader" style="display: none;"></div>
-                    <div id="eventList"></div>
-                </section>
+                <nav class="sub-nav">
+                    <button class="admin-tab-btn active" data-tab="tab-manage">Manage Events</button>
+                    <button class="admin-tab-btn" data-tab="tab-issue">Issue Ticket</button>
+                    <button class="admin-tab-btn" data-tab="tab-view">View Issued Tickets</button>
+                </nav>
 
-                <section id="issueTicketSection" style="margin-top: 40px;">
-                    <h2>Issue Ticket</h2>
-                    <div class="form-group">
-                        <label for="eventSelect">Select Event</label>
-                        <select id="eventSelect" class="form-group" style="width: 100%; padding: 10px;"></select>
+                <!-- Admin Tab: Manage Events -->
+                <div id="tab-manage" class="admin-tab-content active">
+                    <div class="card">
+                        <h2>Create New Event</h2>
+                        <div class="form-group">
+                            <label for="eventName">Event Name</label>
+                            <input type="text" id="eventName" placeholder="e.g., Summer Concert">
+                        </div>
+                        <div class="form-group">
+                            <label for="eventDate">Event Date</label>
+                            <input type="date" id="eventDate" class="form-group">
+                        </div>
+                        <button id="createEventBtn">Create Event</button>
                     </div>
-                    <div class="form-group">
-                        <label for="patronName">Patron Name</label>
-                        <input type="text" id="patronName" placeholder="e.g., Jane Doe">
+                    
+                    <div class="card">
+                        <h2>Existing Events</h2>
+                        <div id="eventListLoader" class="loader" style="display: none;"></div>
+                        <div id="eventList"></div>
                     </div>
-                    <div class="form-group">
-                        <label for="patronEmail">Patron Email</label>
-                        <input type="email" id="patronEmail" placeholder="e.g., jane.doe@example.com">
-                    </div>
-                    <button id="issueTicketBtn">Issue Ticket & Send Email</button>
-                </section>
+                </div>
 
-                <section id="issuedTicketsSection" style="margin-top: 40px;">
-                    <h2>Issued Tickets</h2>
-                    <div class="form-group">
-                        <label for="eventFilterSelect">Filter by Event</label>
-                        <select id="eventFilterSelect" class="form-group" style="width: 100%; padding: 10px;"></select>
+                <!-- Admin Tab: Issue Ticket -->
+                <div id="tab-issue" class="admin-tab-content">
+                    <div class="card">
+                        <h2>Issue New Ticket</h2>
+                        <div class="form-group">
+                            <label for="eventSelect">Select Event</label>
+                            <select id="eventSelect" class="form-group" style="width: 100%;"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="patronName">Patron Name</label>
+                            <input type="text" id="patronName" placeholder="e.g., Jane Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="patronEmail">Patron Email</label>
+                            <input type="email" id="patronEmail" placeholder="e.g., jane.doe@example.com">
+                        </div>
+                        <button id="issueTicketBtn">Issue Ticket & Send Email</button>
                     </div>
-                    <div id="ticketListLoader" class="loader" style="display: none;"></div>
-                    <div id="issuedTicketsList"></div>
-                </section>
+                </div>
+                
+                <!-- Admin Tab: View Issued Tickets -->
+                <div id="tab-view" class="admin-tab-content">
+                    <div class="card">
+                        <h2>Issued Tickets</h2>
+                        <div class="form-group">
+                            <label for="eventFilterSelect">Filter by Event</label>
+                            <select id="eventFilterSelect" class="form-group" style="width: 100%;"></select>
+                        </div>
+                        <div id="ticketListLoader" class="loader" style="display: none;"></div>
+                        <div id="issuedTicketsList"></div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Scanner View -->
@@ -283,19 +453,20 @@
                     <video id="video" playsinline></video>
                     <div id="scanOverlay"></div>
                 </div>
-                <button id="startScanBtn">Start Scanner</button>
+                <!-- "Start Scanner" button removed per request -->
                 <div id="scanResult"></div>
             </div>
 
-            <!-- Ticket View -->
+            <!-- Ticket View (Accessed by URL) -->
             <div id="ticketView" class="app-view">
-                <h1>Your Ticket</h1>
+                <!-- This view is intentionally left blank in the main nav. -->
+                <!-- It's populated by JS when a ticket URL is loaded. -->
                 <div id="ticketDetailsLoader" class="loader"></div>
                 <div id="ticketDetails" style="display: none;">
-                    <h2 id="ticketEventName"></h2>
-                    <p id="ticketEventDate"></p>
+                    <h1 id="ticketEventName" style="color: var(--primary-color);"></h1>
+                    <p id="ticketEventDate" style="font-size: 1.2rem; margin-top: -15px;"></p>
                     <h3 id="ticketPatronName"></h3>
-                    <p id="ticketIdDisplay"></p>
+                    <p id="ticketIdDisplay" style="font-size: 0.9rem; color: #777;"></p>
                     <div id="ticketQRCode"></div>
                     <div id="ticketStatus"></div>
                 </div>
@@ -307,7 +478,6 @@
         // --- CONFIGURATION ---
         
         // ACTION REQUIRED: Paste your Firebase Config object here
-        // This is found in your Firebase Project Settings > General > Your Apps > Web App
         const CUSTOM_FIREBASE_CONFIG = {
             apiKey: "AIzaSyAZz-onz-MM__70UAM-8bUoZKwNCZ19fAc",
             authDomain: "eventlite-7604d.firebaseapp.com",
@@ -319,14 +489,13 @@
         };
         
         // ACTION REQUIRED: Paste your deployed Google Apps Script URL here
-        // This is the URL you get after deploying the Code.gs script as a Web App
         const EMAIL_SERVICE_URL = "https://script.google.com/macros/s/AKfycbyW0N56gYTxM1Rcf8_WXhmOmL0pLv8F_EgWhxkplDoYUIzYR5nWBQzW8g69D6zAOnN9lQ/exec";
 
         // This is the PIN for the admin panel. Change it here.
         const ADMIN_PIN = "1234";
 
         // Custom Sound File URLs
-        const SOUND_SCAN_URL = "https://audio.jukehost.co.uk/SOr7c9lvhs7vWuzpMtRi3rABsiFKJHJf.mp3";
+        // const SOUND_SCAN_URL = "..." // Removed per request
         const SOUND_VALID_URL = "https://audio.jukehost.co.uk/hwKXRIsgvAjL7B2SWXLMC4CLjiG5wFg3.mp3";
         const SOUND_INVALID_URL = "https://audio.jukehost.co.uk/zFn82lCNURrv5lY17P0I8FDJMqPDHieS.mp3";
         // --- END CONFIGURATION ---
@@ -338,11 +507,9 @@
         let currentTicketUnsubscribe = null;
         let currentView = 'admin';
         let scanner = null;
+        let isScanning = false; // New flag for continuous scanning
 
         // Audio Elements
-        // Preload the simple beep sound as it's used frequently
-        const audioScan = new Audio(SOUND_SCAN_URL);
-
         /**
          * Robust sound player.
          * Creates a new Audio object for valid/invalid sounds to prevent
@@ -350,19 +517,15 @@
          */
         function playSound(type) {
             try {
-                if (type === 'scan') {
-                    audioScan.currentTime = 0;
-                    audioScan.play();
-                } else {
-                    let audio;
-                    if (type === 'valid') {
-                        audio = new Audio(SOUND_VALID_URL);
-                    } else if (type === 'invalid') {
-                        audio = new Audio(SOUND_INVALID_URL);
-                    }
-                    if (audio) {
-                        audio.play();
-                    }
+                // 'scan' sound removed per request
+                let audio;
+                if (type === 'valid') {
+                    audio = new Audio(SOUND_VALID_URL);
+                } else if (type === 'invalid') {
+                    audio = new Audio(SOUND_INVALID_URL);
+                }
+                if (audio) {
+                    audio.play();
                 }
             } catch (error) {
                 console.error("Audio playback error:", error);
@@ -374,7 +537,7 @@
         const appContainer = document.getElementById('appContainer');
         const navAdmin = document.getElementById('navAdmin');
         const navScanner = document.getElementById('navScanner');
-        const navTicket = document.getElementById('navTicket');
+        // navTicket removed
         const pinView = document.getElementById('pinView');
         const adminView = document.getElementById('adminView');
         const scannerView = document.getElementById('scannerView');
@@ -386,6 +549,9 @@
         const pinPad = document.getElementById('pinPad');
 
         // Admin Elements
+        const adminTabButtons = document.querySelectorAll('.admin-tab-btn');
+        const adminTabContents = document.querySelectorAll('.admin-tab-content');
+        
         const createEventBtn = document.getElementById('createEventBtn');
         const eventNameInput = document.getElementById('eventName');
         const eventDateInput = document.getElementById('eventDate');
@@ -402,7 +568,6 @@
         const ticketListLoader = document.getElementById('ticketListLoader');
 
         // Scanner Elements
-        const startScanBtn = document.getElementById('startScanBtn');
         const video = document.getElementById('video');
         const scanResult = document.getElementById('scanResult');
         
@@ -418,12 +583,9 @@
 
         /**
          * Initialize Firebase Connection
-         * Tries to use environment variables first, then falls back to
-         * the user-defined CUSTOM_FIREBASE_CONFIG.
          */
         async function initFirebase() {
             try {
-                // Check for environment-provided config
                 let config = window.__firebase_config;
                 let token = window.__initial_auth_token;
 
@@ -433,10 +595,6 @@
                         throw new Error("Firebase config is not set. Please edit CUSTOM_FIREBASE_CONFIG in the HTML file.");
                     }
                     config = CUSTOM_FIREBASE_CONFIG;
-                    // In a custom setup, we don't have a token, so we'll rely on security rules
-                    // that allow reads/writes for authenticated users (which we will be).
-                    // For simplicity in this self-hosted version, we'll skip token-based auth
-                    // and rely on the rules set up in the README.
                     token = null; 
                 }
 
@@ -445,39 +603,31 @@
                 auth = window.firebase.getAuth(app);
                 
                 if(token) {
-                    // This block will run in environments like the Gemini preview
                     await window.firebase.signInWithCustomToken(auth, token);
                     console.log("Firebase Authentication successful (Token).");
                 } else {
-                    // This block will run for self-hosted (GitHub)
-                    // We rely on the Firestore Security Rules being set to:
-                    // allow read, write: if request.auth != null;
-                    // We will enable anonymous auth if needed, but for now, let's assume
-                    // the rules allow public read/write if they're not set correctly.
-                    // The error "Missing or insufficient permissions" means rules are correct.
-                    // For now, we just log that we are in self-hosted mode.
                     console.log("Firebase initialized (Self-hosted). App will rely on Security Rules.");
                 }
 
-                // Initial UI setup
                 loadingView.style.display = 'none';
                 appContainer.style.display = 'block';
                 
-                // Check URL for ticket ID
                 const urlParams = new URLSearchParams(window.location.search);
                 const ticketId = urlParams.get('ticket');
                 const eventId = urlParams.get('event');
 
                 if (ticketId && eventId) {
+                    document.body.classList.add('ticket-view-mode'); // Add class to hide header
                     navigateTo('ticket');
                     loadTicketData(eventId, ticketId);
                 } else {
+                    document.body.classList.remove('ticket-view-mode');
                     navigateTo('admin'); // Default to admin
                 }
                 
             } catch (error) {
                 console.error("Firebase Init Error:", error);
-                loadingView.innerHTML = `<p style="color: red; text-align: center;"><b>Firebase Initialization Error:</b><br>${error.message}<br><br>Please ensure you have correctly pasted your Firebase configuration into the CUSTOM_FIREBASE_CONFIG variable in the HTML file and set up your Firestore Security Rules.</p>`;
+                loadingView.innerHTML = `<p style="color: red; text-align: center;"><b>Firebase Initialization Error:</b><br>${error.message}<br><br>Please ensure you have correctly pasted your Firebase configuration and set up your Firestore Security Rules.</p>`;
             }
         }
 
@@ -488,10 +638,9 @@
             allViews.forEach(v => v.style.display = 'none');
             stopScanner(); // Stop scanner when navigating away
             
-            // Reset nav button styles
             navAdmin.classList.remove('active');
             navScanner.classList.remove('active');
-            navTicket.classList.remove('active');
+            // navTicket removed
 
             currentView = view;
             if (view === 'admin') {
@@ -501,35 +650,21 @@
             } else if (view === 'scanner') {
                 navScanner.classList.add('active');
                 scannerView.style.display = 'block';
+                startScanner(); // Auto-start scanner
             } else if (view === 'ticket') {
-                navTicket.classList.add('active');
+                // This view is only shown via URL, no nav button
                 ticketView.style.display = 'block';
             }
         }
         
         navAdmin.addEventListener('click', () => navigateTo('admin'));
         navScanner.addEventListener('click', () => navigateTo('scanner'));
-        navTicket.addEventListener('click', () => {
-            // Clear URL params when clicking nav
-            window.history.pushState({}, '', window.location.pathname);
-            navigateTo('ticket');
-            // Show empty ticket view
-            ticketDetailsLoader.style.display = 'none';
-            ticketDetails.style.display = 'block';
-            ticketEventName.textContent = "No Ticket Loaded";
-            ticketEventDate.textContent = "";
-            ticketPatronName.textContent = "Click a ticket link from your email.";
-            ticketIdDisplay.textContent = "";
-            ticketQRCode.innerHTML = "";
-            ticketStatus.innerHTML = "";
-        });
 
         /**
          * PIN Pad Logic
          */
         pinPad.addEventListener('click', (e) => {
             if (e.target.tagName !== 'BUTTON') return;
-            
             const key = e.target.textContent;
             let currentPin = pinDisplay.textContent;
 
@@ -541,7 +676,6 @@
                 pinDisplay.textContent += key;
             }
 
-            // Check PIN
             if (pinDisplay.textContent === ADMIN_PIN) {
                 showAdminPanel();
             }
@@ -554,28 +688,47 @@
         }
 
         /**
+         * Admin: Tabbed Navigation
+         */
+        adminTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                
+                // Update button active state
+                adminTabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Show content
+                adminTabContents.forEach(content => {
+                    if (content.id === tabId) {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        /**
          * Admin: Event Management
          */
         async function loadEvents() {
             if (!db) return;
             eventListLoader.style.display = 'block';
             eventList.innerHTML = '';
-            eventSelect.innerHTML = '';
+            eventSelect.innerHTML = '<option value="">-- Select an Event --</option>';
             eventFilterSelect.innerHTML = '<option value="all">All Events</option>';
 
             try {
-                // Unsubscribe from previous listener if it exists
                 if (currentEventUnsubscribe) {
                     currentEventUnsubscribe();
                 }
-
                 const eventsRef = window.firebase.collection(db, "events");
                 
-                // Set up a real-time listener
                 currentEventUnsubscribe = window.firebase.onSnapshot(eventsRef, (querySnapshot) => {
                     eventListLoader.style.display = 'none';
                     eventList.innerHTML = '';
-                    eventSelect.innerHTML = '';
+                    eventSelect.innerHTML = '<option value="">-- Select an Event --</option>';
                     eventFilterSelect.innerHTML = '<option value="all">All Events</option>';
                     
                     if (querySnapshot.empty) {
@@ -586,7 +739,6 @@
                     querySnapshot.forEach((doc) => {
                         const event = { id: doc.id, ...doc.data() };
                         
-                        // Add to event list
                         const eventEl = document.createElement('div');
                         eventEl.className = 'list-item';
                         eventEl.innerHTML = `
@@ -594,22 +746,20 @@
                                 <h3>${event.name}</h3>
                                 <p>Date: ${event.date} | ID: ${event.id}</p>
                             </div>
-                            <button class="danger delete-event-btn" data-id="${event.id}">Delete</button>
+                            <button class="danger small delete-event-btn" data-id="${event.id}">Delete</button>
                         `;
                         eventList.appendChild(eventEl);
                         
-                        // Add to select dropdowns
                         const optionEl = document.createElement('option');
                         optionEl.value = event.id;
-                        optionEl.textContent = event.name;
-                        optionEl.dataset.name = event.name; // Store name for email
-                        optionEl.dataset.date = event.date; // Store date for email
+                        optionEl.textContent = `${event.name} (${event.date})`;
+                        optionEl.dataset.name = event.name; 
+                        optionEl.dataset.date = event.date; 
                         
                         eventSelect.appendChild(optionEl);
                         eventFilterSelect.appendChild(optionEl.cloneNode(true));
                     });
                     
-                    // Add delete event listeners
                     document.querySelectorAll('.delete-event-btn').forEach(btn => {
                         btn.addEventListener('click', () => deleteEvent(btn.dataset.id));
                     });
@@ -643,7 +793,7 @@
                 console.log("Event created with ID: ", docRef.id);
                 eventNameInput.value = '';
                 eventDateInput.value = '';
-                // List will update automatically via onSnapshot
+                // List will update automatically
             } catch (error) {
                 console.error("Error adding event: ", error);
                 alert("Failed to create event: " + error.message);
@@ -654,23 +804,16 @@
             if (!confirm("Are you sure you want to delete this event? This will also delete ALL associated tickets.")) {
                 return;
             }
-            
             try {
-                // 1. Delete the event document
                 await window.firebase.deleteDoc(window.firebase.doc(db, "events", eventId));
-                
-                // 2. Delete all tickets in the subcollection
                 const ticketsRef = window.firebase.collection(db, "events", eventId, "tickets");
                 const ticketsQuery = await window.firebase.getDocs(ticketsRef);
-                
                 const batch = window.firebase.writeBatch(db);
                 ticketsQuery.forEach((doc) => {
                     batch.delete(doc.ref);
                 });
                 await batch.commit();
-                
                 console.log("Event and all associated tickets deleted successfully.");
-                // List will update automatically via onSnapshot
             } catch (error) {
                 console.error("Error deleting event: ", error);
                 alert("Failed to delete event and tickets: " + error.message);
@@ -685,14 +828,11 @@
         });
         
         function loadTickets(eventId) {
-            if (!db) return;
-
-            // Unsubscribe from previous listener
             if (currentTicketUnsubscribe) {
                 currentTicketUnsubscribe();
             }
             
-            if (eventId === 'all') {
+            if (eventId === 'all' || !eventId) {
                 issuedTicketsList.innerHTML = '<p>Select an event to see issued tickets.</p>';
                 ticketListLoader.style.display = 'none';
                 return;
@@ -718,20 +858,23 @@
                         ticketEl.className = 'list-item';
                         
                         let status = ticket.scanned 
-                            ? `<span style="color: var(--danger-color);">Scanned at ${new Date(ticket.scannedAt.seconds * 1000).toLocaleString()}</span>`
-                            : `<span style="color: var(--success-color);">Valid</span>`;
+                            ? `<span style="color: var(--danger-color); font-weight: 600;">Scanned</span>`
+                            : `<span style="color: var(--success-color); font-weight: 600;">Valid</span>`;
+                        
+                        let scannedInfo = ticket.scanned
+                            ? `Scanned: ${new Date(ticket.scannedAt.seconds * 1000).toLocaleString()}`
+                            : `Email: ${ticket.email}`;
                         
                         ticketEl.innerHTML = `
                             <div class="list-item-content">
                                 <h3>${ticket.name}</h3>
-                                <p>Email: ${ticket.email} | Status: ${status}</p>
-                                <p>Ticket ID: ${ticket.id}</p>
-                                <div class="qr-code-container" id="qr_${ticket.id}"></div>
+                                <p>${scannedInfo} | Status: ${status}</p>
+                                <p style="font-size: 0.8rem; color: #888;">Ticket ID: ${ticket.id}</p>
+                                <div class="qr-code-container" id="qr_${ticket.id}" style="margin-top: 15px;"></div>
                             </div>
                         `;
                         issuedTicketsList.appendChild(ticketEl);
                         
-                        // Generate QR Code
                         new QRCode(document.getElementById(`qr_${ticket.id}`), {
                             text: JSON.stringify({ eventId: eventId, ticketId: ticket.id }),
                             width: 128,
@@ -771,7 +914,6 @@
             issueTicketBtn.textContent = "Issuing...";
 
             try {
-                // 1. Create ticket in Firestore
                 const ticketsRef = window.firebase.collection(db, "events", eventId, "tickets");
                 const ticketDoc = await window.firebase.addDoc(ticketsRef, {
                     name: patronName,
@@ -782,20 +924,19 @@
                 
                 console.log("Ticket created with ID: ", ticketDoc.id);
 
-                // 2. Send email via Google Apps Script
                 const ticketLink = `${window.location.origin}${window.location.pathname}?event=${eventId}&ticket=${ticketDoc.id}`;
                 
                 await sendTicketEmail({
                     event: eventDetails,
                     ticketId: ticketDoc.id,
-                    email: patronEmail,
-                    ticketLink: ticketLink
+                    email: patronEmail, // This is the patron's email from the form
+                    ticketLink: ticketLink,
+                    name: patronName
                 });
 
                 alert(`Ticket successfully issued to ${patronName} and email sent!`);
                 patronNameInput.value = '';
                 patronEmailInput.value = '';
-                // Ticket list will update via onSnapshot
 
             } catch (error) {
                 console.error("Error issuing ticket: ", error);
@@ -811,36 +952,28 @@
                 console.warn("Email sending skipped: EMAIL_SERVICE_URL is not set.");
                 throw new Error("Email sending failed (Admin setup incomplete). Ticket was created, but no email was sent.");
             }
-            
             try {
                 const response = await fetch(EMAIL_SERVICE_URL, {
                     method: 'POST',
                     mode: 'cors',
                     cache: 'no-cache',
-                    headers: {
-                        'Content-Type': 'text/plain', // Use text/plain for GAS POST data
-                    },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(ticketData),
                     redirect: 'follow'
                 });
-                
                 const result = await response.json();
-                
                 if (!result.success) {
                     throw new Error(result.error || "Unknown email service error");
                 }
-                
                 console.log("Email service success:", result.message);
-
             } catch (error) {
                 console.error("Error calling email service:", error);
-                // Don't block the UI, but provide a more informative error
                 throw new Error(`Ticket was created, but email failed to send: ${error.message}`);
             }
         }
         
         /**
-         * Ticket Viewer
+         * Ticket Viewer (External Link)
          */
         async function loadTicketData(eventId, ticketId) {
             ticketDetails.style.display = 'none';
@@ -848,23 +981,16 @@
             ticketQRCode.innerHTML = "";
             
             try {
-                // 1. Get Event Details
                 const eventRef = window.firebase.doc(db, "events", eventId);
                 const eventSnap = await window.firebase.getDoc(eventRef);
-                if (!eventSnap.exists()) {
-                    throw new Error("Event not found.");
-                }
+                if (!eventSnap.exists()) throw new Error("Event not found.");
                 const event = eventSnap.data();
                 
-                // 2. Get Ticket Details
                 const ticketRef = window.firebase.doc(db, "events", eventId, "tickets", ticketId);
                 const ticketSnap = await window.firebase.getDoc(ticketRef);
-                if (!ticketSnap.exists()) {
-                    throw new Error("Ticket not found.");
-                }
+                if (!ticketSnap.exists()) throw new Error("Ticket not found.");
                 const ticket = ticketSnap.data();
 
-                // 3. Populate UI
                 ticketEventName.textContent = event.name;
                 ticketEventDate.textContent = `On ${event.date}`;
                 ticketPatronName.textContent = ticket.name;
@@ -878,7 +1004,6 @@
                     ticketStatus.textContent = "This ticket is valid for entry.";
                 }
 
-                // 4. Generate QR Code
                 new QRCode(ticketQRCode, {
                     text: JSON.stringify({ eventId: eventId, ticketId: ticketId }),
                     width: 300,
@@ -902,35 +1027,29 @@
         }
 
         /**
-         * Scanner
+         * Scanner (Continuous)
          */
-        startScanBtn.addEventListener('click', () => {
-            if (scanner) {
-                stopScanner();
-            } else {
-                startScanner();
-            }
-        });
-
         function startScanner() {
+            if (isScanning) return; // Already running
+            
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
                 .then(stream => {
                     video.srcObject = stream;
-                    video.setAttribute("playsinline", true); // Required for iOS
+                    video.setAttribute("playsinline", true);
                     video.play();
-                    startScanBtn.textContent = "Stop Scanner";
-                    startScanBtn.classList.add('danger');
                     scanResult.style.display = 'none';
-                    
-                    scanner = requestAnimationFrame(tick);
+                    isScanning = true;
+                    scanner = requestAnimationFrame(tick); // Start the loop
                 })
                 .catch(err => {
                     console.error("Camera Error:", err);
                     alert("Could not access camera. Please grant permission.");
+                    isScanning = false;
                 });
         }
 
         function stopScanner() {
+            isScanning = false;
             if (scanner) {
                 cancelAnimationFrame(scanner);
                 scanner = null;
@@ -939,11 +1058,11 @@
                 video.srcObject.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
             }
-            startScanBtn.textContent = "Start Scanner";
-            startScanBtn.classList.remove('danger');
         }
         
         function tick() {
+            if (!isScanning) return; // Stop if flag is false
+
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 const canvasElement = document.createElement('canvas');
                 const canvas = canvasElement.getContext('2d');
@@ -957,13 +1076,16 @@
                 });
 
                 if (code) {
-                    playSound('scan');
-                    stopScanner();
+                    isScanning = false; // Stop scanning temporarily
+                    // playSound('scan'); // Removed per request
                     handleScannedCode(code.data);
-                    return; // Stop ticking
+                    // Don't request another frame here, handleScannedCode will restart it
                 }
             }
-            scanner = requestAnimationFrame(tick);
+            
+            if (isScanning) { // Only continue loop if flag is true
+                scanner = requestAnimationFrame(tick);
+            }
         }
 
         async function handleScannedCode(data) {
@@ -980,7 +1102,8 @@
                 console.error("QR Parse Error:", error);
                 scanResult.classList.add('error');
                 scanResult.textContent = "Invalid QR Code. Not a valid ticket.";
-                playSound('invalid');
+                playSound('invalid'); // Play invalid sound for random QR
+                restartScanner(2500); // Restart after cooldown
                 return;
             }
 
@@ -990,16 +1113,13 @@
 
             try {
                 const ticketRef = window.firebase.doc(db, "events", eventId, "tickets", ticketId);
-                
-                // IMPORTANT: This line was the source of the "firebase.updateDoc is not a function" error.
-                // It is now fixed because `updateDoc` is imported and exposed via `window.firebase.updateDoc`.
-                
                 const ticketSnap = await window.firebase.getDoc(ticketRef);
 
                 if (!ticketSnap.exists()) {
                     scanResult.classList.add('error');
                     scanResult.textContent = `Verification Error: Ticket (ID: ${ticketId}) does not exist.`;
                     playSound('invalid');
+                    restartScanner(2500);
                     return;
                 }
 
@@ -1009,6 +1129,7 @@
                     scanResult.classList.add('warn');
                     scanResult.textContent = `Ticket Already Scanned: ${ticket.name}'s ticket was scanned at ${new Date(ticket.scannedAt.seconds * 1000).toLocaleString()}.`;
                     playSound('invalid'); // Use invalid sound for already scanned
+                    restartScanner(2500);
                     return;
                 }
 
@@ -1021,13 +1142,26 @@
                 scanResult.classList.add('success');
                 scanResult.textContent = `Success! Ticket for ${ticket.name} is valid and now marked as scanned.`;
                 playSound('valid');
+                restartScanner(2500); // Restart after success
 
             } catch (error) {
                 console.error("Verification Error:", error);
                 scanResult.classList.add('error');
                 scanResult.textContent = `Verification Error: ${error.message}`;
                 playSound('invalid');
+                restartScanner(2500); // Restart on error
             }
+        }
+        
+        function restartScanner(cooldown) {
+            setTimeout(() => {
+                scanResult.style.display = 'none';
+                scanResult.className = ''; // Clear result
+                if (currentView === 'scanner') { // Only restart if still on scanner view
+                    isScanning = true;
+                    scanner = requestAnimationFrame(tick);
+                }
+            }, cooldown);
         }
         
         // Start the app
