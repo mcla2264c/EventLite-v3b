@@ -37,58 +37,18 @@
         };
     </script>
     <style>
-        /* * NOTE: If your layout looks wrong (e.g., logo on the left, not the top),
-         * your browser is caching an old file. 
-         * Please do a HARD REFRESH (Cmd+Shift+R or Ctrl+F5) to load the new layout.
+        /* * NOTE: Renamed classes to fix browser caching issues
+         * that prevented the top-bar layout from loading.
          */
         :root {
             --primary-color: #4A90E2; /* A modern blue */
-            --secondary-color: #50E3C2; /* A bright mint green/aqua */
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #007bff; /* Added for "Ready to Scan" */
-            --light-color: #ffffff;
-            --dark-color: #2F3136;
-            --text-color: #333;
-            --bg-color: #f7f8fa;
-            --border-color: #e0e0e0;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --border-radius: 8px;
-        }
-        body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            /* Flex layout to push footer down */
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        #appContainer {
-            flex-grow: 1; /* Makes the main container grow to fill space */
-        }
-        .container { 
-            max-width: 900px; 
-            margin: 20px auto; 
-            padding: 0 20px; 
-        }
-        .app-view { display: none; }
-        #loadingView {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+<!-- ... existing code ... */
             font-size: 1.5rem;
             flex-direction: column;
         }
         
-        /* Header/Nav */
-        .header {
+        /* Header/Nav (RENAMED to bust cache) */
+        .app-header {
             background: var(--light-color);
             padding: 15px 30px;
             box-shadow: var(--shadow);
@@ -96,336 +56,30 @@
             justify-content: space-between;
             align-items: center;
         }
-        .logo {
-            font-size: 1.5rem; /* <-- Made logo slightly smaller */
+        .app-logo {
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary-color);
             margin: 0;
         }
-        nav#mainNav {
+        nav.main-nav {
             display: flex;
             gap: 10px;
         }
-        nav#mainNav button {
+        nav.main-nav button {
             background: transparent;
             color: #555;
-            border: 2px solid transparent;
-            padding: 8px 16px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.2s ease-in-out;
-            width: auto;
-            margin: 0;
-        }
-        nav#mainNav button:hover {
-            color: var(--primary-color);
-            background: #f0f7ff;
-        }
-        nav#mainNav button.active {
-            color: var(--primary-color);
-            font-weight: 600;
-            border-bottom: 2px solid var(--primary-color);
-            background: #f0f7ff;
+<!-- ... existing code ... */
             border-radius: 4px 4px 0 0;
         }
 
         h1, h2, h3 { 
-            color: var(--text-color); 
-            font-weight: 600;
-            margin-top: 0;
-        }
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 20px;
-        }
-        h2 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        /* Card / Section Styling */
-        .card {
-            background: var(--light-color);
-            padding: 25px 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            margin-top: 20px;
-        }
-
-        /* Forms and Inputs */
-        .form-group { margin-bottom: 20px; }
-        .form-group label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: 500; 
-            font-size: 0.95rem;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            box-sizing: border-box; /* Important */
-            font-size: 1rem;
-            font-family: 'Poppins', sans-serif;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        /* Custom style for file input */
-        .form-group input[type="file"] {
-            padding: 10px;
-            background: var(--bg-color);
-        }
-        .form-group input[type="file"]::file-selector-button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-weight: 500;
-            margin-right: 10px;
-            transition: background-color 0.2s;
-        }
-        .form-group input[type="file"]::file-selector-button:hover {
-            background: #3a7bc8;
-        }
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-        }
-        button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 14px 22px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            width: 100%;
-            margin-top: 10px;
-            transition: background-color 0.2s;
-            font-family: 'Poppins', sans-serif;
-        }
-        button:hover { background: #3a7bc8; }
-        button:disabled { background: #aaa; cursor: not-allowed; }
-        button.danger { background-color: var(--danger-color); }
-        button.danger:hover { background-color: #c82333; }
-        button.secondary { background-color: #6c757d; }
-        button.secondary:hover { background-color: #5a6268; }
-        button.small {
-            padding: 8px 12px;
-            font-size: 0.9rem;
-            width: auto;
-            margin: 0;
-        }
-
-        /* PIN Pad */
-        #pinView .card { max-width: 400px; margin-left: auto; margin-right: auto; }
-        #pinPad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin: 20px auto;
-        }
-        #pinPad button { width: auto; font-size: 1.5rem; padding: 20px; background: #f0f0f0; color: var(--text-color); }
-        #pinPad button:hover { background: #e0e0e0; }
-        #pinDisplay {
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            padding: 15px;
-            text-align: center;
-            font-size: 2rem;
-            letter-spacing: 10px;
-            min-height: 50px;
-            border-radius: var(--border-radius);
-            margin-bottom: 15px;
-        }
-
-        /* Admin Sub-Navigation */
-        nav.sub-nav {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 25px;
-        }
-        nav.sub-nav button {
-            background: transparent;
-            color: #777;
-            padding: 10px 20px;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            margin: 0 10px 0 0;
-            border-radius: 0;
-            width: auto;
-            transition: all 0.2s;
-        }
-        nav.sub-nav button:hover { color: var(--text-color); }
-        nav.sub-nav button.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-            font-weight: 600;
-        }
-        .admin-tab-content { display: none; }
-        .admin-tab-content.active { display: block; }
-
-
-        /* Ticket View (External) */
-        #ticketView {
-            padding-top: 20px;
-        }
-        body.ticket-view-mode .header { display: none; } /* Hide nav header in ticket view */
-        #ticketDetails { 
-            text-align: center; 
-            background: #fff; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            max-width: 500px;
-            margin: 20px auto;
-        }
-        #ticketQRCode { 
-            width: 300px; 
-            height: 300px; 
-            margin: 20px auto; 
-            padding: 15px; 
-            background: #fff; 
-            border-radius: 10px; 
-            box-shadow: var(--shadow);
-        }
-        #ticketStatus {
-            font-size: 1.2rem;
-            font-weight: 600;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-top: 20px;
-        }
-        #ticketStatus.valid { color: var(--success-color); background: #e9f7ec; border: 1px solid var(--success-color); }
-        #ticketStatus.invalid { color: var(--danger-color); background: #fdf0f1; border: 1px solid var(--danger-color); }
-        
-        /* Scanner */
-        #scannerView { text-align: center; }
-        /* H1 Ticket Scanner header removed */
-        #videoContainer {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            border: 5px solid var(--dark-color);
-            box-shadow: var(--shadow);
-        }
-        #video { width: 100%; height: auto; display: block; }
-        #scanOverlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border: 50px solid rgba(0, 0, 0, 0.3);
-            box-shadow: inset 0 0 0 5px var(--primary-color);
-        }
-        #scanResult {
-            padding: 20px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: var(--border-radius);
-            margin-top: 20px;
-            display: none; /* Will be shown by startScanner */
-            box-shadow: var(--shadow);
-            transition: background-color 0.3s ease;
-        }
-        #scanResult.success { background-color: var(--success-color); color: white; }
-        #scanResult.error { background-color: var(--danger-color); color: white; }
-        #scanResult.warn { background-color: var(--warning-color); color: var(--dark-color); }
-        #scanResult.info { background-color: var(--info-color); color: white; }
-
-        /* CSV Progress Bar */
-        #csvProgress {
-            font-size: 0.9rem;
-            color: #555;
-            margin-top: 15px;
-        }
-        #csvProgress .progress-bar {
-            width: 100%;
-            height: 10px;
-            background: var(--border-color);
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-        #csvProgress .progress-bar-inner {
-            width: 0%;
-            height: 100%;
-            background: var(--primary-color);
-            transition: width 0.3s ease;
-        }
-
-
-        /* Event & Ticket Lists */
-        .list-item {
-            background: #fff;
-            padding: 15px 20px;
-            margin-bottom: 10px;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: box-shadow 0.2s;
-        }
-        .list-item:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        .list-item-content { flex-grow: 1; }
-        .list-item-content h3 { margin: 0 0 5px; font-size: 1.1rem; }
-        .list-item-content p { margin: 0; font-size: 0.9rem; color: #555; }
-        #issuedTicketsList .qr-code-container {
-            padding: 10px;
-            background: #fff;
-            border: 1px solid #eee;
-            margin-top: 10px;
-            border-radius: var(--border-radius);
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* New Footer */
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #777;
-            font-size: 0.9rem;
-            margin-top: 40px;
-            border-top: 1px solid var(--border-color);
-            width: 100%;
-            box-sizing: border-box;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="loadingView">
-        <div class="loader"></div>
-        <p>Initializing database connection...</p>
-    </div>
-
+<!-- ... existing code ... */
     <div id="appContainer" style="display: none;">
         
-        <header class="header">
-            <h1 class="logo"><strong>Event</strong>Lite</h1>
-            <nav id="mainNav">
+        <header class="app-header">
+            <h1 class="app-logo"><strong>Event</strong><span style="font-weight: 500;">Lite</span></h1>
+            <nav id="mainNav" class="main-nav">
                 <button id="navAdmin">Admin</button>
                 <button id="navScanner">Scanner</button>
             </nav>
@@ -1367,5 +1021,3 @@
     </script>
 </body>
 </html>
-
-
