@@ -577,6 +577,20 @@
 
             // --- CONFIGURATION ---
             
+            // =========================================================================
+            //  IMPORTANT: PASTE YOUR FIREBASE CONFIG OBJECT HERE
+            // =========================================================================
+            // To prevent a `SyntaxError: Unexpected token '{` error:
+            // 1. DO NOT delete `const CUSTOM_FIREBASE_CONFIG =`
+            // 2. Paste your object from the Firebase console *after* the equals sign.
+            //
+            // It should look like this:
+            // const CUSTOM_FIREBASE_CONFIG = {
+            //   apiKey: "AIza...",
+            //   authDomain: "your-project.firebaseapp.com",
+            //   ...
+            // };
+            // =========================================================================
             const CUSTOM_FIREBASE_CONFIG = {
                 apiKey: "AIzaSyAZz-onz-MM__70UAM-8bUoZKwNCZ19fAc",
                 authDomain: "eventlite-7604d.firebaseapp.com",
@@ -1311,7 +1325,7 @@
                     scanResult.className = 'error'; // Red
                     scanResult.textContent = "Invalid QR Code. Not a valid ticket.";
                     playSound('invalid');
-                    restartScanner(4000); 
+Next, I would like to be able to scan a QR code from an image or screenshot that someone has, because not all people will have their QR code in person or will be able to pull it up on their phone, sometimes they just have a screenshot.                    restartScanner(4000); 
                     return;
                 }
 
